@@ -1,0 +1,19 @@
+{
+  "version": "0.2.1",
+  "tasks": [
+    {
+      "taskLabel": "Launch",
+      "appliesTo": "/",
+      "type": "launch",
+      "command": "${env.COMSPEC}",
+      "args": [ ".\\venv\\Scripts\\uvicorn.exe app.main:app --app-dir ./ --reload --env-file .env" ]
+    },
+    {
+      "taskLabel": "Install venv",
+      "appliesTo": "/",
+      "type": "launch",
+      "command": "${env.COMSPEC}",
+      "args": [ "python -m venv venv" ]
+    }
+  ]
+}
