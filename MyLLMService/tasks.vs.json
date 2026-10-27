@@ -13,7 +13,7 @@
       "appliesTo": "/",
       "type": "launch",
       "command": "${env.COMSPEC}",
-      "args": [ "python -m venv venv" ]
+      "args": [ "python -m venv venv && .\\venv\\Scripts\\pip.exe install -r requirements.txt" ]
     }
   ]
 }
