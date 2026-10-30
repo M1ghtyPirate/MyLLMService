@@ -31,10 +31,10 @@ def _state(request: Request) -> AppState:
             },
         },
         503: {
-            "description": "Эндпойнт LLM недоступен",
+            "description": "Сервис временно недоступен",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Эндпойнт LLM недоступен"}
+                    "example": {"detail": "Сервис временно недоступен, попробуйте позже"}
                 }
             },
         },
@@ -59,18 +59,20 @@ async def get_joke(joke_request: Annotated[JokeRequest, Query()], request: Reque
     if joke_request is None:
         raise HTTPException(
             status_code=422,
-            detail="Empty request",
+            detail="Пустой запрос",
         )
     normalized_tags = state.normalize_tags(joke_request.tags)
+    if any(len(tag) > 100 for tag in normalized_tags):
+        raise HTTPException(status_code=422, detail="Длина каждой темы не должна превышать 100 символов")
     if len(normalized_tags) == 0:
         raise HTTPException(
             status_code=422,
-            detail="Empty tags collection in request",
+            detail="В запросе отсутствуют темы",
         )
     joke = state.get_joke(normalized_tags)
     if joke is None:
         raise HTTPException(
             status_code=503,
-            detail="Эндпойнт LLM недоступен",
+            detail="Сервис временно недоступен, попробуйте позже",
         )
     return joke
