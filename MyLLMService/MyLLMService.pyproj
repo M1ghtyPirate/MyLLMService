@@ -55,7 +55,6 @@
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
     <Content Include="tasks.vs.json" />
-    <Content Include="test_report.md" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="venv\">
