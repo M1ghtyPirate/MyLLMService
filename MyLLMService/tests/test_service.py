@@ -4,39 +4,61 @@ import unittest
 from unittest.mock import Mock
 
 from app.config.settings import Settings
-from app.llm.client import LLMUnavailableError
-from app.models import JokeResponse
-from app.services.joke_service import InvalidLLMResponseError, JokeService
-from app.state import AppState
+from app.llm.client import LLMNetworkError
+from app.models import ShoppingListRequest
+from app.services.shopping_list_service import (
+    EMPTY_DISH_MESSAGE,
+    LONG_DISH_MESSAGE,
+    NETWORK_ERROR_MESSAGE,
+    ShoppingListHandler,
+    ShoppingListService,
+)
 
 
-class JokeServiceTests(unittest.TestCase):
-	def setUp(self) -> None:
-		self.service = JokeService(Settings())
-		self.service.llm = Mock()
+class ShoppingListTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.service = ShoppingListService(Settings())
+        self.service.llm = Mock()
+        self.handler = ShoppingListHandler(self.service)
 
-	def test_normalizes_tags_at_state_boundary(self) -> None:
-		self.assertEqual(AppState.normalize_tags([" Python ", "python", "AI"]), ["ai", "python"])
+    def test_empty_input_is_rejected_before_api_call(self) -> None:
+        result = self.handler.handle("  ", "2", "Список продуктов")
 
-	def test_builds_response_and_reuses_cache(self) -> None:
-		self.service.llm.complete.return_value = "Заголовок|Текст"
+        self.assertEqual(result, EMPTY_DISH_MESSAGE)
+        self.service.llm.complete.assert_not_called()
 
-		first = self.service.get_joke(["python"])
-		second = self.service.get_joke(["python"])
+    def test_long_input_is_rejected_before_api_call(self) -> None:
+        result = self.handler.handle("x" * 1001, "2", "Список продуктов")
 
-		self.assertIsInstance(first, JokeResponse)
-		self.assertEqual(first, second)
-		self.service.llm.complete.assert_called_once()
+        self.assertEqual(result, LONG_DISH_MESSAGE)
+        self.service.llm.complete.assert_not_called()
 
-	def test_rejects_invalid_model_response(self) -> None:
-		with self.assertRaises(InvalidLLMResponseError):
-			self.service._post_process("Ответ без разделителя", ["python"])
+    def test_normal_input_returns_shopping_list(self) -> None:
+        self.service.llm.complete.return_value = "Куриное филе — 500 г\nРис — 300 г"
 
-	def test_returns_none_when_model_is_unavailable(self) -> None:
-		self.service.llm.complete.side_effect = LLMUnavailableError("Сервис LLM недоступен")
+        result = self.handler.handle("Курица с рисом", "4", "Список продуктов")
 
-		self.assertIsNone(self.service.get_joke(["python"]))
+        self.assertIn("Куриное филе", result)
+        self.service.llm.complete.assert_called_once()
+
+    def test_identical_request_uses_cache(self) -> None:
+        self.service.llm.complete.return_value = "Мука — 500 г"
+        request = ShoppingListRequest(dish="Блины", people="2", output_format="Список продуктов")
+
+        first = self.service.generate(request)
+        second = self.service.generate(request)
+
+        self.assertEqual(first, second)
+        self.service.llm.complete.assert_called_once()
+
+    def test_network_error_is_safe_for_ui(self) -> None:
+        self.service.llm.complete.side_effect = LLMNetworkError("secret provider details")
+
+        result = self.handler.handle("Суп", "2", "Список продуктов")
+
+        self.assertEqual(result, NETWORK_ERROR_MESSAGE)
+        self.assertNotIn("secret", result)
 
 
 if __name__ == "__main__":
-	unittest.main()
+    unittest.main()

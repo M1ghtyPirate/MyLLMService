@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>e9ef616b-810d-482e-88a4-e2154fa23e10</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>app\main.py</StartupFile>
+    <StartupFile>gradio_app.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,30 +22,22 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="app\api\jokes.py" />
     <Compile Include="app\cache\memory.py" />
-    <Compile Include="app\config\Settings.py" />
+    <Compile Include="app\config\settings.py" />
     <Compile Include="app\llm\client.py" />
     <Compile Include="app\llm\prompt_builder.py" />
-    <Compile Include="app\llm\__init__.py" />
     <Compile Include="app\logging_config.py" />
-    <Compile Include="app\main.py" />
-    <Compile Include="app\middleware.py" />
     <Compile Include="app\models.py" />
-    <Compile Include="app\services\joke_service.py" />
-    <Compile Include="app\services\__init__.py" />
-    <Compile Include="app\state.py" />
+    <Compile Include="app\services\shopping_list_service.py" />
     <Compile Include="app\__init__.py" />
     <Compile Include="tests\test_service.py" />
-    <Compile Include="tests\__init__.py" />
+    <Compile Include="gradio_app.py" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="app\api\" />
     <Folder Include="app\llm\" />
     <Folder Include="app\cache\" />
     <Folder Include="app\config\" />
     <Folder Include="app\" />
-    <Folder Include="app\tests\" />
     <Folder Include="app\services\" />
     <Folder Include="tests\" />
   </ItemGroup>

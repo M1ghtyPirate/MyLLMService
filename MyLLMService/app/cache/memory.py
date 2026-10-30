@@ -22,9 +22,11 @@ class TTLCache:
 		self._items: dict[str, _CacheEntry] = {}
 
 	@staticmethod
-	def make_key(*, tags: list[str], model: str, temperature: float, system_prompt: str) -> str:
+	def make_key(*, dish: str, people: str, output_format: str, model: str, temperature: float, system_prompt: str) -> str:
 		payload = {
-			"tags": tags,
+			"dish": dish,
+			"people": people,
+			"output_format": output_format,
 			"model": model,
 			"temperature": temperature,
 			"system_prompt": system_prompt,

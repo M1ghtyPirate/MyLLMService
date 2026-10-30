@@ -1,21 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import List, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
-class JokeRequest(BaseModel):
-    """Входная модель для получения анекдота."""
-
-    tags: List[str] = Field(..., min_length=1, max_length=5, description="Темы анекдота")
+PeopleCount = Literal["1", "2", "4", "6"]
+OutputFormat = Literal["Список продуктов", "Список + шаги"]
 
 
-class JokeResponse(BaseModel):
-    """Модель ответа для представления анекдота."""
-
-    tags: List[str] = Field(..., min_length=1, max_length=5, description="Темы анекдота")
-    title: str = Field(..., min_length=1, max_length=100, description="Название анекдота")
-    text: str = Field(..., min_length=1, max_length=5000, description="Текст анекдота")
-    created_at: datetime = Field(..., description="Метка времени генерации анекдота")
+class ShoppingListRequest(BaseModel):
+	dish: str = Field(..., min_length=1, max_length=1000)
+	people: PeopleCount
+	output_format: OutputFormat

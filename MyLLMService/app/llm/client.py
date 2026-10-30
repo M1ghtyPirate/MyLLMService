@@ -12,7 +12,23 @@ from ..config.settings import Settings
 logger = logging.getLogger(__name__)
 
 
-class LLMUnavailableError(RuntimeError):
+class LLMError(RuntimeError):
+	pass
+
+
+class LLMAccessError(LLMError):
+	pass
+
+
+class LLMServiceError(LLMError):
+	pass
+
+
+class LLMNetworkError(LLMError):
+	pass
+
+
+class LLMResponseError(LLMError):
 	pass
 
 
@@ -49,7 +65,7 @@ class LLMClient:
 				response: Any = client.chat(prompt)
 				content = response.choices[0].message.content
 				if not isinstance(content, str) or not content.strip():
-					raise ValueError("Модель LLM вернула пустой ответ")
+					raise LLMResponseError("Модель вернула пустой ответ")
 				logger.info("Ответ от модели получен", extra={"event": "llm_response_received", "attempt": attempt})
 				return content
 			except (TimeoutError, requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
@@ -64,11 +80,15 @@ class LLMClient:
 				last_error = exc
 				status_code = getattr(getattr(exc, "response", None), "status_code", 0)
 				logger.error("Ошибка вызова LLM", extra={"event": "llm_call_failed", "attempt": attempt, "error": str(exc)})
-				if status_code < 500 or attempt >= self.settings.llm_max_retries:
-					break
+				if status_code < 500:
+					raise LLMAccessError("Ошибка доступа к сервису модели") from exc
+				if attempt >= self.settings.llm_max_retries:
+					raise LLMServiceError("Сервис модели недоступен") from exc
 				time.sleep(self.settings.llm_retry_backoff * (2 ** (attempt - 1)))
+			except LLMResponseError:
+				raise
 			except Exception as exc:
 				last_error = exc
 				logger.exception("Ошибка вызова LLM", extra={"event": "llm_call_failed", "attempt": attempt})
 				break
-		raise LLMUnavailableError("Сервис LLM недоступен") from last_error
+		raise LLMNetworkError("Не удалось связаться с сервисом модели") from last_error

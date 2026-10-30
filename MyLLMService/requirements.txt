@@ -1,6 +1,5 @@
-fastapi
 pydantic-settings
 python-dotenv
 gigachat
 requests
-uvicorn[standard]
+gradio
