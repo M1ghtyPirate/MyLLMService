@@ -4,8 +4,8 @@ import logging
 import time
 from typing import Any
 
-from gigachat import GigaChat
 import requests
+from gigachat import GigaChat
 
 from ..config.settings import Settings
 
@@ -89,6 +89,6 @@ class LLMClient:
 				raise
 			except Exception as exc:
 				last_error = exc
-				logger.exception("Ошибка вызова LLM", extra={"event": "llm_call_failed", "attempt": attempt})
+				logger.exception("Ошибка вызова LLM", extra={"event": "llm_call_failed", "attempt": attempt, "error": str(exc)})
 				break
 		raise LLMNetworkError("Не удалось связаться с сервисом модели") from last_error

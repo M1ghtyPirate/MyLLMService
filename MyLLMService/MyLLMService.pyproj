@@ -28,7 +28,7 @@
     <Compile Include="app\llm\prompt_builder.py" />
     <Compile Include="app\logging_config.py" />
     <Compile Include="app\models.py" />
-    <Compile Include="app\services\shopping_list_service.py" />
+    <Compile Include="app\services\text_style_service.py" />
     <Compile Include="app\__init__.py" />
     <Compile Include="tests\test_service.py" />
     <Compile Include="gradio_app.py" />

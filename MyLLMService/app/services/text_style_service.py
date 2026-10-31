@@ -5,41 +5,48 @@ import time
 
 from ..cache.memory import TTLCache
 from ..config.settings import Settings
-from ..llm.client import LLMAccessError, LLMNetworkError, LLMResponseError, LLMServiceError, LLMClient
-from ..llm.prompt_builder import SYSTEM_PROMPT, build_shopping_list_prompt
-from ..models import ShoppingListRequest
+from ..llm.client import (
+	LLMAccessError,
+	LLMClient,
+	LLMNetworkError,
+	LLMResponseError,
+	LLMServiceError,
+)
+from ..llm.prompt_builder import SYSTEM_PROMPT, build_style_review_prompt
+from ..models import StyleReviewRequest
 
 logger = logging.getLogger(__name__)
 
-EMPTY_DISH_MESSAGE = "Напишите, что хотите приготовить."
-LONG_DISH_MESSAGE = "Слишком длинный текст — сократите или разбейте на части."
+EMPTY_TEXT_MESSAGE = "Напишите текст для проверки."
+LONG_TEXT_MESSAGE = "Слишком длинный текст — сократите или разбейте на части."
+INVALID_STYLE_MESSAGE = "Выберите стиль текста."
 ACCESS_ERROR_MESSAGE = "Не настроен доступ к сервису."
 SERVICE_ERROR_MESSAGE = "Сервис временно недоступен. Попробуйте позже."
 NETWORK_ERROR_MESSAGE = "Не удалось получить ответ. Попробуйте ещё раз."
-EMPTY_RESPONSE_MESSAGE = "Пустой ответ модели. Попробуйте переформулировать вопрос."
+EMPTY_RESPONSE_MESSAGE = "Пустой ответ модели. Попробуйте проверить другой текст."
 
 
 class UserInputError(ValueError):
 	pass
 
 
-class ShoppingListError(RuntimeError):
+class StyleReviewError(RuntimeError):
 	pass
 
 
-def validate_input(dish: str, people: str, output_format: str) -> ShoppingListRequest:
-	normalized_dish = (dish or "").strip()
-	if not normalized_dish:
-		raise UserInputError(EMPTY_DISH_MESSAGE)
-	if len(normalized_dish) > 1000:
-		raise UserInputError(LONG_DISH_MESSAGE)
+def validate_input(text: str, style: str) -> StyleReviewRequest:
+	normalized_text = (text or "").strip()
+	if not normalized_text:
+		raise UserInputError(EMPTY_TEXT_MESSAGE)
+	if len(normalized_text) > 10000:
+		raise UserInputError(LONG_TEXT_MESSAGE)
 	try:
-		return ShoppingListRequest(dish=normalized_dish, people=people, output_format=output_format)
+		return StyleReviewRequest(text=normalized_text, style=style)
 	except ValueError as exc:
-		raise UserInputError("Выберите количество человек и формат ответа.") from exc
+		raise UserInputError(INVALID_STYLE_MESSAGE) from exc
 
 
-class ShoppingListService:
+class TextStyleService:
 	def __init__(self, settings: Settings) -> None:
 		self.settings = settings
 		self.cache = TTLCache(settings.cache_ttl_seconds)
@@ -52,17 +59,16 @@ class ShoppingListService:
 			raise LLMResponseError(EMPTY_RESPONSE_MESSAGE)
 		return result
 
-	def generate(self, request: ShoppingListRequest) -> str:
+	def review(self, request: StyleReviewRequest) -> str:
 		prompt_started = time.perf_counter()
-		prompt = build_shopping_list_prompt(request.dish, request.people, request.output_format)
+		prompt = build_style_review_prompt(request.text, request.style)
 		logger.info(
-			"Запрос к модели сформирован",
+			"Промпт для проверки стиля сформирован",
 			extra={"event": "prompt_created", "prompt": prompt, "duration_ms": int((time.perf_counter() - prompt_started) * 1000)},
 		)
 		cache_key = self.cache.make_key(
-			dish=request.dish,
-			people=request.people,
-			output_format=request.output_format,
+			text=request.text,
+			style=request.style,
 			model=self.settings.llm_model,
 			temperature=self.settings.llm_temperature,
 			system_prompt=SYSTEM_PROMPT,
@@ -81,33 +87,33 @@ class ShoppingListService:
 			result = self._post_process(content)
 		except LLMAccessError as exc:
 			logger.warning("Не настроен доступ к сервису", extra={"event": "llm_access_error", "error": str(exc)})
-			raise ShoppingListError(ACCESS_ERROR_MESSAGE) from exc
+			raise StyleReviewError(ACCESS_ERROR_MESSAGE) from exc
 		except LLMServiceError as exc:
 			logger.warning("Сервис модели временно недоступен", extra={"event": "llm_service_error", "error": str(exc)})
-			raise ShoppingListError(SERVICE_ERROR_MESSAGE) from exc
+			raise StyleReviewError(SERVICE_ERROR_MESSAGE) from exc
 		except LLMNetworkError as exc:
 			logger.warning("Не удалось связаться с моделью", extra={"event": "llm_network_error", "error": str(exc)})
-			raise ShoppingListError(NETWORK_ERROR_MESSAGE) from exc
+			raise StyleReviewError(NETWORK_ERROR_MESSAGE) from exc
 		except LLMResponseError as exc:
 			logger.warning("Модель вернула пустой или некорректный ответ", extra={"event": "llm_response_error", "error": str(exc)})
-			raise ShoppingListError(EMPTY_RESPONSE_MESSAGE) from exc
+			raise StyleReviewError(EMPTY_RESPONSE_MESSAGE) from exc
 
 		self.cache.set(cache_key, result)
 		return result
 
 
-class ShoppingListHandler:
-	def __init__(self, service: ShoppingListService | None = None) -> None:
-		self.service = service or ShoppingListService(Settings())
+class StyleReviewHandler:
+	def __init__(self, service: TextStyleService | None = None) -> None:
+		self.service = service or TextStyleService(Settings())
 
-	def handle(self, dish: str, people: str, output_format: str) -> str:
+	def handle(self, text: str, style: str) -> str:
 		try:
-			request = validate_input(dish, people, output_format)
-			return self.service.generate(request)
+			request = validate_input(text, style)
+			return self.service.review(request)
 		except UserInputError as exc:
 			return str(exc)
-		except ShoppingListError as exc:
+		except StyleReviewError as exc:
 			return str(exc)
 		except Exception:
 			logger.exception("Непредвиденная ошибка обработчика", extra={"event": "handler_error"})
-			return "Не удалось обработать запрос. Попробуйте ещё раз."
+			return "Не удалось проверить текст. Попробуйте ещё раз."

@@ -5,48 +5,48 @@ from unittest.mock import Mock
 
 from app.config.settings import Settings
 from app.llm.client import LLMNetworkError
-from app.models import ShoppingListRequest
-from app.services.shopping_list_service import (
-    EMPTY_DISH_MESSAGE,
-    LONG_DISH_MESSAGE,
+from app.models import StyleReviewRequest
+from app.services.text_style_service import (
+    EMPTY_TEXT_MESSAGE,
+    LONG_TEXT_MESSAGE,
     NETWORK_ERROR_MESSAGE,
-    ShoppingListHandler,
-    ShoppingListService,
+    StyleReviewHandler,
+    TextStyleService,
 )
 
 
-class ShoppingListTests(unittest.TestCase):
+class TextStyleReviewTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.service = ShoppingListService(Settings())
+        self.service = TextStyleService(Settings())
         self.service.llm = Mock()
-        self.handler = ShoppingListHandler(self.service)
+        self.handler = StyleReviewHandler(self.service)
 
     def test_empty_input_is_rejected_before_api_call(self) -> None:
-        result = self.handler.handle("  ", "2", "Список продуктов")
+        result = self.handler.handle("  ", "научный")
 
-        self.assertEqual(result, EMPTY_DISH_MESSAGE)
+        self.assertEqual(result, EMPTY_TEXT_MESSAGE)
         self.service.llm.complete.assert_not_called()
 
     def test_long_input_is_rejected_before_api_call(self) -> None:
-        result = self.handler.handle("x" * 1001, "2", "Список продуктов")
+        result = self.handler.handle("x" * 10001, "научный")
 
-        self.assertEqual(result, LONG_DISH_MESSAGE)
+        self.assertEqual(result, LONG_TEXT_MESSAGE)
         self.service.llm.complete.assert_not_called()
 
-    def test_normal_input_returns_shopping_list(self) -> None:
-        self.service.llm.complete.return_value = "Куриное филе — 500 г\nРис — 300 г"
+    def test_valid_text_returns_remarks(self) -> None:
+        self.service.llm.complete.return_value = "- Слово «очень» избыточно. Уберите его для краткости."
 
-        result = self.handler.handle("Курица с рисом", "4", "Список продуктов")
+        result = self.handler.handle("Это очень важный текст.", "официально-деловой")
 
-        self.assertIn("Куриное филе", result)
+        self.assertIn("избыточно", result)
         self.service.llm.complete.assert_called_once()
 
     def test_identical_request_uses_cache(self) -> None:
-        self.service.llm.complete.return_value = "Мука — 500 г"
-        request = ShoppingListRequest(dish="Блины", people="2", output_format="Список продуктов")
+        self.service.llm.complete.return_value = "Замечаний нет."
+        request = StyleReviewRequest(text="Текст для проверки.", style="научный")
 
-        first = self.service.generate(request)
-        second = self.service.generate(request)
+        first = self.service.review(request)
+        second = self.service.review(request)
 
         self.assertEqual(first, second)
         self.service.llm.complete.assert_called_once()
@@ -54,7 +54,7 @@ class ShoppingListTests(unittest.TestCase):
     def test_network_error_is_safe_for_ui(self) -> None:
         self.service.llm.complete.side_effect = LLMNetworkError("secret provider details")
 
-        result = self.handler.handle("Суп", "2", "Список продуктов")
+        result = self.handler.handle("Проверяемый текст.", "разговорный")
 
         self.assertEqual(result, NETWORK_ERROR_MESSAGE)
         self.assertNotIn("secret", result)
