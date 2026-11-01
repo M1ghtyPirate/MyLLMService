@@ -41,6 +41,25 @@ class TextStyleReviewTests(unittest.TestCase):
         self.assertIn("избыточно", result)
         self.service.llm.complete.assert_called_once()
 
+    def test_corrected_text_format_returns_rewritten_text(self) -> None:
+        self.service.llm.complete.return_value = "Это исправленный текст."
+
+        result = self.handler.handle("Это текст.", "научный", "текст с исправлениями")
+
+        self.assertEqual(result, "Это исправленный текст.")
+        self.service.llm.complete.assert_called_once()
+
+    def test_response_formats_use_separate_cache_entries(self) -> None:
+        self.service.llm.complete.side_effect = ["Рекомендация", "Исправленный текст"]
+        text = "Исходный текст."
+
+        recommendations = self.handler.handle(text, "научный", "рекомендации по тексту")
+        corrected = self.handler.handle(text, "научный", "текст с исправлениями")
+
+        self.assertEqual(recommendations, "Рекомендация")
+        self.assertEqual(corrected, "Исправленный текст")
+        self.assertEqual(self.service.llm.complete.call_count, 2)
+
     def test_identical_request_uses_cache(self) -> None:
         self.service.llm.complete.return_value = "Замечаний нет."
         request = StyleReviewRequest(text="Текст для проверки.", style="научный")

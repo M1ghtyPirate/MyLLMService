@@ -10,8 +10,8 @@ configure_logging(Settings().log_file)
 handler = StyleReviewHandler()
 
 
-def review_text(text: str, style: str) -> str:
-    return handler.handle(text, style)
+def review_text(text: str, style: str, response_format: str) -> str:
+    return handler.handle(text, style, response_format)
 
 
 def build_demo() -> gr.Blocks:
@@ -24,15 +24,27 @@ def build_demo() -> gr.Blocks:
             max_lines=12,
         )
         style = gr.Dropdown(
-            choices=["научный", "официально-деловой", "разговорный"],
+            choices=[
+                ("Научный", "научный"),
+                ("Официально-деловой", "официально-деловой"),
+                ("Разговорный", "разговорный"),
+            ],
             value="научный",
             label="Стиль текста",
+        )
+        response_format = gr.Dropdown(
+            choices=[
+                ("Рекомендации по тексту", "рекомендации по тексту"),
+                ("Текст с исправлениями", "текст с исправлениями"),
+            ],
+            value="рекомендации по тексту",
+            label="Формат ответа",
         )
         review_button = gr.Button("Проверить стиль", variant="primary")
         result = gr.Markdown()
         review_button.click(
             fn=review_text,
-            inputs=[text, style],
+            inputs=[text, style, response_format],
             outputs=result,
         )
     return demo
