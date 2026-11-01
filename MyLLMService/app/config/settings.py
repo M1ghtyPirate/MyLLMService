@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     authorization_key: str
     llm_model: str = "GigaChat-2"
     llm_temperature: float = 0.2
-    llm_timeout: float = 60.0
+    llm_timeout: float = 15.0
     llm_max_retries: int = 2
     llm_retry_backoff: float = 0.5
     cache_ttl_seconds: int = 600

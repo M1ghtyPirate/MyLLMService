@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from app.config.settings import Settings
-from app.llm.client import LLMNetworkError
+from app.llm.client import LLMClient, LLMNetworkError
 from app.models import StyleReviewRequest
 from app.services.text_style_service import (
     EMPTY_TEXT_MESSAGE,
@@ -58,6 +58,20 @@ class TextStyleReviewTests(unittest.TestCase):
 
         self.assertEqual(result, NETWORK_ERROR_MESSAGE)
         self.assertNotIn("secret", result)
+
+
+class LLMClientTests(unittest.TestCase):
+    def test_zero_retries_still_performs_one_attempt(self) -> None:
+        client = LLMClient(Settings(llm_max_retries=0))
+        client._get_access_token = Mock(return_value="token")
+
+        with patch("app.llm.client.GigaChat") as gigachat:
+            gigachat.return_value.chat.side_effect = TimeoutError()
+
+            with self.assertRaises(LLMNetworkError):
+                client.complete("Проверьте текст")
+
+        gigachat.return_value.chat.assert_called_once_with("Проверьте текст")
 
 
 if __name__ == "__main__":

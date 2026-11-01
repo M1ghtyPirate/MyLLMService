@@ -42,9 +42,9 @@
     <Folder Include="tests\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include=".env" />
     <Content Include=".env.example" />
     <Content Include="README.md" />
+	<Content Include="TESTING.md" />
     <Content Include="requirements.txt" />
     <Content Include="tasks.vs.json" />
   </ItemGroup>

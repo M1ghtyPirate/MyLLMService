@@ -52,7 +52,8 @@ class LLMClient:
 
 	def complete(self, prompt: str) -> str:
 		last_error: Exception | None = None
-		for attempt in range(1, self.settings.llm_max_retries + 1):
+		attempts = max(1, self.settings.llm_max_retries + 1)
+		for attempt in range(1, attempts + 1):
 			try:
 				client = GigaChat(
 					base_url=self.settings.api_endpoint,
@@ -74,7 +75,7 @@ class LLMClient:
 					"Ошибка вызова LLM",
 					extra={"event": "llm_call_failed", "attempt": attempt, "error": str(exc)},
 				)
-				if attempt < self.settings.llm_max_retries:
+				if attempt < attempts:
 					time.sleep(self.settings.llm_retry_backoff * (2 ** (attempt - 1)))
 			except requests.exceptions.RequestException as exc:
 				last_error = exc
@@ -82,7 +83,7 @@ class LLMClient:
 				logger.error("Ошибка вызова LLM", extra={"event": "llm_call_failed", "attempt": attempt, "error": str(exc)})
 				if status_code < 500:
 					raise LLMAccessError("Ошибка доступа к сервису модели") from exc
-				if attempt >= self.settings.llm_max_retries:
+				if attempt >= attempts:
 					raise LLMServiceError("Сервис модели недоступен") from exc
 				time.sleep(self.settings.llm_retry_backoff * (2 ** (attempt - 1)))
 			except LLMResponseError:
