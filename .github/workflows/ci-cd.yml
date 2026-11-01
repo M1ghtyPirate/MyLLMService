@@ -3,6 +3,8 @@ name: CI/CD
 on:
   push:
     branches: ["master", "task-final"]
+  pull_request:
+    branches: ["master", "task-final"]
   workflow_dispatch:
 
 permissions:
