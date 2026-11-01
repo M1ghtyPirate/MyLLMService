@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: ["master", "task-recipe-ui"]
+    branches: ["master", "task-final"]
   workflow_dispatch:
 
 permissions:

@@ -44,6 +44,7 @@
   <ItemGroup>
     <Content Include=".env.example" />
     <Content Include="README.md" />
+    <Content Include="ChangeLog.md" />
 	<Content Include="TESTING.md" />
     <Content Include="requirements.txt" />
     <Content Include="tasks.vs.json" />
