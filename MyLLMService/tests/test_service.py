@@ -17,7 +17,7 @@ from app.services.text_style_service import (
 
 class TextStyleReviewTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.service = TextStyleService(Settings())
+        self.service = TextStyleService(test_settings())
         self.service.llm = Mock()
         self.handler = StyleReviewHandler(self.service)
 
@@ -62,7 +62,7 @@ class TextStyleReviewTests(unittest.TestCase):
 
 class LLMClientTests(unittest.TestCase):
     def test_zero_retries_still_performs_one_attempt(self) -> None:
-        client = LLMClient(Settings(llm_max_retries=0))
+        client = LLMClient(test_settings(llm_max_retries=0))
         client._get_access_token = Mock(return_value="token")
 
         with patch("app.llm.client.GigaChat") as gigachat:
@@ -72,6 +72,16 @@ class LLMClientTests(unittest.TestCase):
                 client.complete("Проверьте текст")
 
         gigachat.return_value.chat.assert_called_once_with("Проверьте текст")
+
+
+def test_settings(**overrides: object) -> Settings:
+    values: dict[str, object] = {
+        "api_access_token_endpoint": "https://example.test/oauth",
+        "api_endpoint": "https://example.test/api",
+        "authorization_key": "test-key",
+    }
+    values.update(overrides)
+    return Settings(**values)
 
 
 if __name__ == "__main__":
