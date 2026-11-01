@@ -34,14 +34,14 @@ class StyleReviewError(RuntimeError):
 	pass
 
 
-def validate_input(text: str, style: str) -> StyleReviewRequest:
+def validate_input(text: str, style: str, response_format: str) -> StyleReviewRequest:
 	normalized_text = (text or "").strip()
 	if not normalized_text:
 		raise UserInputError(EMPTY_TEXT_MESSAGE)
 	if len(normalized_text) > 10000:
 		raise UserInputError(LONG_TEXT_MESSAGE)
 	try:
-		return StyleReviewRequest(text=normalized_text, style=style)
+		return StyleReviewRequest(text=normalized_text, style=style, response_format=response_format)
 	except ValueError as exc:
 		raise UserInputError(INVALID_STYLE_MESSAGE) from exc
 
@@ -61,7 +61,7 @@ class TextStyleService:
 
 	def review(self, request: StyleReviewRequest) -> str:
 		prompt_started = time.perf_counter()
-		prompt = build_style_review_prompt(request.text, request.style)
+		prompt = build_style_review_prompt(request.text, request.style, request.response_format)
 		logger.info(
 			"Промпт для проверки стиля сформирован",
 			extra={"event": "prompt_created", "prompt": prompt, "duration_ms": int((time.perf_counter() - prompt_started) * 1000)},
@@ -69,6 +69,7 @@ class TextStyleService:
 		cache_key = self.cache.make_key(
 			text=request.text,
 			style=request.style,
+			response_format=request.response_format,
 			model=self.settings.llm_model,
 			temperature=self.settings.llm_temperature,
 			system_prompt=SYSTEM_PROMPT,
@@ -106,9 +107,9 @@ class StyleReviewHandler:
 	def __init__(self, service: TextStyleService | None = None) -> None:
 		self.service = service or TextStyleService(Settings())
 
-	def handle(self, text: str, style: str) -> str:
+	def handle(self, text: str, style: str, response_format: str = "рекомендации по тексту") -> str:
 		try:
-			request = validate_input(text, style)
+			request = validate_input(text, style, response_format)
 			return self.service.review(request)
 		except UserInputError as exc:
 			return str(exc)
